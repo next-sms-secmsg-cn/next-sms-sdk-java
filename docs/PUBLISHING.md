@@ -16,6 +16,8 @@
 
 ## 2. 验证命名空间
 
+2026-11-19 已在 Central Portal 确认 `cn.secmsg` 为 Verified。下面保留首次验证操作，当前账号无需重复注册。
+
 在 [Central Portal](https://central.sonatype.com) 登录并验证 `cn.secmsg`。在域名 `secmsg.cn` 的根记录添加 TXT，主机记录通常为 `@`，值使用 Portal 当次提供的 Verification Key。
 
 ```sh
