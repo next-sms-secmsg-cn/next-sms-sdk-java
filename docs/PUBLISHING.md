@@ -26,7 +26,9 @@ dig +short TXT secmsg.cn
 
 确认 TXT 生效后再点击 Confirm，等待命名空间显示 Verified。GitHub 登录不等于已验证自有域名。不要把 TXT 加到 `cn.secmsg` 或任意自定义子域名。
 
-## 3. Central User Token
+## 3. Central User Token（仅命令行上传需要）
+
+通过浏览器上传第 6 节的签名 ZIP 不需要创建 Token。本次采用浏览器上传，未保存 Central Token。
 
 在 Portal 的账号页面生成 User Token，得到一对 username/password，不是 GitHub PAT，也不是短信接口账号。
 
@@ -50,7 +52,7 @@ export CENTRAL_USERNAME CENTRAL_PASSWORD
 macOS 首次安装及生成密钥：
 
 ```sh
-brew install gnupg
+brew install gnupg pinentry-mac
 gpg --full-generate-key
 gpg --list-secret-keys --keyid-format LONG
 ```
@@ -59,10 +61,13 @@ gpg --list-secret-keys --keyid-format LONG
 
 ```sh
 gpg --keyserver hkps://keyserver.ubuntu.com --send-keys YOUR_FULL_FINGERPRINT
+gpg --keyserver hkps://keys.openpgp.org --send-keys YOUR_FULL_FINGERPRINT
 export GPG_TTY=$(tty)
 ```
 
 私钥由本机 GPG 管理，口令通过 gpg-agent/pinentry 输入，不写在 POM 或 settings.xml 中。插件开启 `bestPractices=true`，禁止通过不安全的 Maven 参数传递口令。自动化环境需要口令时使用插件支持的 `MAVEN_GPG_PASSPHRASE` 秘密环境变量，并通过 CI 密钥管理注入。
+
+本次专用 RSA 3072 位签名公钥指纹为 `CDFDE476F16345CEFD3EC5C355BF21EA9B9DAC03`，有效期至 2028-11-18。私钥保存在发布机器 `~/.gnupg`（目录权限 700），不随项目上传；应另行安全备份私钥及吊销证书。macOS 使用图形口令框时，在 `~/.gnupg/gpg-agent.conf` 配置 `pinentry-program /opt/homebrew/bin/pinentry-mac`（文件权限 600）。该路径为本次 Apple Silicon Homebrew 安装路径，其他机器按实际路径配置。
 
 ## 5. 本地构建与签名检查
 
@@ -107,6 +112,8 @@ mvn -Pcentral -Dgpg.keyname=YOUR_FULL_FINGERPRINT \
 
 产物为 `target/central-publishing/central-bundle.zip`。`skipUpload` 只跳过上传，仍需要正确元数据和 GPG。不要用 `skipPublishing` 代替，它会连 bundle 都不生成。
 
+浏览器上传方式：登录 Portal，点击 Publish Component，填写 Deployment Name 并选择上述 ZIP；上传后在 Deployments 检查校验结果。只有 VALIDATED 才能点击 Publish；最终必须看到 PUBLISHED，并确认 Maven Central 能下载该版本，才算发布完成。Deployment Name 仅是部署标签，不改变 ZIP 中的 Maven 版本。
+
 完成后清除当前终端的 Token：
 
 ```sh
@@ -135,6 +142,7 @@ unset CENTRAL_USERNAME CENTRAL_PASSWORD
 | GPG 无法弹出口令框 | 设置 `GPG_TTY=$(tty)`，在交互终端运行，不要先使用 `-B` 批处理 |
 | 上传 401/403 | 检查 Central Token、server id=central，以及 cn.secmsg 是否 Verified |
 | 校验缺少 sources/javadoc/签名 | 从本模块执行完整 `-Pcentral clean deploy`，不要只上传普通 JAR |
+| Could not find a public key by the key fingerprint | 核对 `.asc` 中的完整发行者指纹；将公钥上传到支持的公钥服务器，公开下载后验签。新公钥已可下载但 Portal 仍失败时，保留原签名包，等待服务器检索状态更新后重新上传；不要更换密钥或提升版本来绕过此错误 |
 | Javadoc no comment 警告 | 当前部分 API 没有 Javadoc 注释；包仍生成，详细使用说明见 README 和 docs/API.md |
 | 版本已存在 | 确认已发布记录，提升版本，不能覆盖已公开版本 |
 
@@ -146,4 +154,10 @@ unset CENTRAL_USERNAME CENTRAL_PASSWORD
 - [Central Token](https://central.sonatype.org/publish/generate-portal-token/)
 - [Maven GPG 签名参数](https://maven.apache.org/plugins/maven-gpg-plugin/sign-mojo.html)
 
-本次仅验证普通构建、Javadoc 产物和 Central profile 配置；验证机器没有 GPG，未执行真实签名、上传或发布。
+## 本次发布验证记录（2026-11-19）
+
+- 源码提交 `939b007719a3a4ec8598188965ead765ae4ea215`，包名 `cn.secmsg`；JDK 17 的 15 项测试通过。
+- 已生成主包、源码包、Javadoc 包、POM，以及四份 GPG 签名；16 份 MD5/SHA-1/SHA-256/SHA-512 校验和核对通过。
+- 已在独立公钥目录使用从 Ubuntu 公钥服务器重新下载的公钥完成主包验签。
+- Portal 已实际上传，部署 `6477f9e3-2743-4cbe-bb12-69af2288ec57` 和 `b9e67505-09dd-47a6-a044-414a9e89b1e3` 均因无法检索公钥而校验失败，尚未正式发布。
+- Ubuntu、OpenPGP 两个服务器按完整指纹公开下载均返回 HTTP 200。后续继续使用相同签名包重新校验，通过后再 Publish，不重复创建签名密钥。
