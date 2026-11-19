@@ -1,4 +1,4 @@
-package cn.wxo2o.sms;
+package cn.secmsg;
 
 import com.google.gson.*;
 import okhttp3.*;

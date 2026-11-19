@@ -1,7 +1,7 @@
-package cn.wxo2o.sms.examples;
+package cn.secmsg.examples;
 
-import cn.wxo2o.sms.NextSmsClient;
-import cn.wxo2o.sms.Sms;
+import cn.secmsg.NextSmsClient;
+import cn.secmsg.Sms;
 
 public final class SendExample {
     public static void main(String[] args) throws Exception {

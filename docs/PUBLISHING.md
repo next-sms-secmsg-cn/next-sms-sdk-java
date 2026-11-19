@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-发布坐标为 `cn.secmsg:next-sms-sdk-java:1.0.0`，JDK 17。Java 包名仍是 `cn.wxo2o.sms`，不改调用方 import；接口默认地址不变。
+发布坐标为 `cn.secmsg:next-sms-sdk-java:1.0.0`，JDK 17。Java 包名统一为 `cn.secmsg`；接口默认地址不变。试用过未发布版本的调用方需同步更新 import。
 
 已配置普通 JAR、sources JAR、Javadoc JAR、GPG 签名及 Central Portal 上传插件。发布功能仅在 `-Pcentral` 下启用，`autoPublish=false`，上传通过验证后仍需在 Portal 手动点击 Publish。
 

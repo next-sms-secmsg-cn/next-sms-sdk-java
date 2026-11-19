@@ -1,4 +1,4 @@
-package cn.wxo2o.sms;
+package cn.secmsg;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;

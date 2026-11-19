@@ -1,4 +1,4 @@
-package cn.wxo2o.sms;
+package cn.secmsg;
 
 import okhttp3.Authenticator;
 import okhttp3.Credentials;

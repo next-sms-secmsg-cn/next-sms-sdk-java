@@ -22,14 +22,14 @@ mvn install
 </dependency>
 ```
 
-Maven 坐标为 `cn.secmsg:next-sms-sdk-java:1.0.0`；Java 包名仍为 `cn.wxo2o.sms`，不需要修改下方 import。坐标命名空间与 Java 包名互相独立。
+Maven 坐标为 `cn.secmsg:next-sms-sdk-java:1.0.0`；Java 包名统一为 `cn.secmsg`。试用过未发布版本的调用方需将旧包名 import 改为 `cn.secmsg`。
 
 中央库发布使用显式 `central` profile，普通 `mvn clean verify` 不签名、不上传。发布准备、Token、GPG 和首次上线步骤见 [Maven Central 发布手册](docs/PUBLISHING.md)。
 
 ## 同步发送
 
 ```java
-import cn.wxo2o.sms.*;
+import cn.secmsg.*;
 import com.google.gson.JsonObject;
 
 try (var client = new NextSmsClient(System.getenv("NEXT_SMS_SP_ID"), System.getenv("NEXT_SMS_SP_KEY"))) {
