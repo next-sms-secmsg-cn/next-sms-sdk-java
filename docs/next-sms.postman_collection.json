@@ -1,0 +1,292 @@
+{
+  "info": {
+    "name": "Next-SMS HTTP API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Select one request at a time. Sends require confirmSend=YES. Queue pulls consume records. Configure secrets only in local environment values."
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "try {",
+          "    const CryptoJS = pm.require('npm:crypto-js@4.2.0');",
+          "    const required = (name) => {",
+          "        const value = pm.variables.get(name);",
+          "        if (typeof value !== 'string' || value.length === 0) {",
+          "            throw new Error('Missing variable: ' + name);",
+          "        }",
+          "        return value;",
+          "    };",
+          "    const spId = required('spId');",
+          "    const spKey = required('spKey');",
+          "    if (!/^[A-Za-z0-9_-]+$/.test(spId)) throw new Error('Invalid spId');",
+          "    const endpoint = pm.info.requestName;",
+          "    let body;",
+          "    switch (endpoint) {",
+          "        case 'send':",
+          "        case 'secureSend': {",
+          "            if (pm.variables.get('confirmSend') !== 'YES') {",
+          "                throw new Error('Set confirmSend=YES only for an authorized send test');",
+          "            }",
+          "            const payload = {",
+          "                content: required('content'), mobile: required('mobile'),",
+          "                msgid: required('msgid')",
+          "            };",
+          "            for (const name of ['extCode', 'sId', 'sendTime']) {",
+          "                const value = pm.variables.get(name);",
+          "                if (value !== undefined && value !== '') payload[name] = String(value);",
+          "            }",
+          "            body = JSON.stringify(payload);",
+          "            if (endpoint === 'secureSend') {",
+          "                const keyText = spKey.length >= 16 ? spKey.slice(0, 16) : spKey.padStart(16, 'a');",
+          "                const aesKey = CryptoJS.enc.Utf8.parse(keyText);",
+          "                if (![16, 24, 32].includes(aesKey.sigBytes)) throw new Error('Invalid AES key length');",
+          "                const encrypted = CryptoJS.AES.encrypt(body, aesKey, {",
+          "                    mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7",
+          "                }).ciphertext.toString(CryptoJS.enc.Base64);",
+          "                body = JSON.stringify({content: encrypted});",
+          "            }",
+          "            break;",
+          "        }",
+          "        case 'getReport':",
+          "        case 'getUpstream': {",
+          "            const maxSize = Number(required('maxSize'));",
+          "            if (!Number.isInteger(maxSize) || maxSize < 10 || maxSize > 1000) {",
+          "                throw new Error('maxSize must be an integer between 10 and 1000');",
+          "            }",
+          "            body = JSON.stringify({maxSize});",
+          "            break;",
+          "        }",
+          "        case 'getBalance':",
+          "            body = '';",
+          "            break;",
+          "        case 'getDailyStats':",
+          "        case 'getSignDailyStats': {",
+          "            const date = required('date');",
+          "            if (!/^\\d{8}$/.test(date)) throw new Error('date must use yyyyMMdd');",
+          "            body = JSON.stringify({date});",
+          "            break;",
+          "        }",
+          "        default:",
+          "            throw new Error('Keep the original endpoint request name');",
+          "    }",
+          "    pm.variables.set('requestBody', body);",
+          "    const timestamp = String(Date.now());",
+          "    const signature = CryptoJS.HmacSHA256(body + timestamp, spKey).toString(CryptoJS.enc.Base64);",
+          "    pm.request.headers.upsert({key: 'Content-Type', value: 'application/json; charset=utf-8'});",
+          "    pm.request.headers.upsert({key: 'Authorization', value: 'HMAC-SHA256 ' + timestamp + ',' + signature});",
+          "} catch (error) {",
+          "    pm.execution.skipRequest();",
+          "    throw error;",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('HTTP 200', function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "pm.test('API status=0', function () {",
+          "    const response = pm.response.json();",
+          "    pm.expect(response.status).to.eql(0);",
+          "    if (['send', 'secureSend'].includes(pm.info.requestName)) {",
+          "        pm.expect(response.msgid).to.be.a('string');",
+          "    }",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://nsms-api.wxo2o.cn",
+      "type": "string"
+    },
+    {
+      "key": "spId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "spKey",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mobile",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "content",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "msgid",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "extCode",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sendTime",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "date",
+      "value": "20261118",
+      "type": "string"
+    },
+    {
+      "key": "maxSize",
+      "value": "500",
+      "type": "string"
+    },
+    {
+      "key": "confirmSend",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "getBalance",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/getBalance/{{spId}}"
+      }
+    },
+    {
+      "name": "getDailyStats",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/getDailyStats/{{spId}}"
+      }
+    },
+    {
+      "name": "getSignDailyStats",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/getSignDailyStats/{{spId}}"
+      }
+    },
+    {
+      "name": "getReport",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/getReport/{{spId}}"
+      }
+    },
+    {
+      "name": "getUpstream",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/getUpstream/{{spId}}"
+      }
+    },
+    {
+      "name": "send",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/send/{{spId}}"
+      }
+    },
+    {
+      "name": "secureSend",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{{requestBody}}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": "{{baseUrl}}/sms/secureSend/{{spId}}"
+      }
+    }
+  ]
+}
